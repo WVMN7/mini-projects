@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Camera Air Draw</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/hands.js" crossorigin="anonymous"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      overflow: hidden;
+      background:
+        radial-gradient(circle at top left, rgba(0,180,255,.25), transparent 25%),
+        radial-gradient(circle at bottom right, rgba(255,0,140,.18), transparent 22%),
+        linear-gradient(135deg, #0b1020, #111827 45%, #0a0f1d 100%);
+      color: white;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #drawCanvas {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      cursor: crosshair;
+    }
+
+    #cursor {
+      position: fixed;
+      width: 22px;
+      height: 22px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 4;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 14px rgba(255,255,255,.6);
+      display: none;
+    }
+
+    .panel {
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 5;
+      width: 330px;
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 12px 35px rgba(0,0,0,.35);
+    }
+
+    .panel h2 {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .panel p {
+      font-size: 13px;
+      line-height: 1.5;
+      opacity: .9;
+      margin-bottom: 12px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button, input[type="color"] {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+    }
+
+    button {
+      cursor: pointer;
+      background: white;
+      color: #111;
+    }
+
+    button.secondary {
+      background: rgba(255,255,255,.14);
+      color: white;
+      border: 1px solid rgba(255,255,255,.12);
+    }
+
+    label {
+      font-size: 13px;
+      opacity: .92;
+    }
+
+    input[type="range"] {
+      width: 120px;
+    }
+
+    #videoPreview {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      width: 240px;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 18px;
+      transform: scaleX(-1);
+      z-index: 5;
+      border: 1px solid rgba(255,255,255,.16);
+      box-shadow: 0 14px 36px rgba(0,0,0,.35);
+      background: #000;
+    }
+
+    .status {
+      font-size: 12px;
+      opacity: .85;
+      margin-top: 4px;
+      min-height: 18px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.12);
+      font-size: 12px;
+      margin-right: 6px;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="drawCanvas"></canvas>
+  <div id="cursor"></div>
+
+  <div class="panel">
+    <h2>Air Draw</h2>
+    <p>
+      Kamera orqali qo‘lingni kuzatadi. <b>Bosh barmoq + ko‘rsatkich barmoqni birlashtirsang</b> chizadi.
+      Ajratsang chizish to‘xtaydi.
+    </p>
+
+    <div class="row">
+      <button id="startBtn">Kamerani yoqish</button>
+      <button id="clearBtn" class="secondary">Tozalash</button>
+      <button id="eraserBtn" class="secondary">O‘chirgich: OFF</button>
+    </div>
+
+    <div class="row">
+      <label>Rang</label>
+      <input type="color" id="colorPicker" value="#ffffff" />
+      <label>Qalinlik</label>
+      <input type="range" id="sizeRange" min="2" max="30" value="6" />
+    </div>
+
+    <div class="status" id="status">Holat: kutilyapti...</div>
+
+    <div>
+      <span class="badge">Pinch = chizish</span>
+      <span class="badge">Ajratish = stop</span>
+      <span class="badge">Fullscreen qilsang zo‘r</span>
+    </div>
+  </div>
+
+  <video id="videoPreview" autoplay playsinline muted></video>
+
+  <script>
+    const videoEl = document.getElementById("videoPreview");
+    const canvas = document.getElementById("drawCanvas");
+    const ctx = canvas.getContext("2d");
+    const cursor = document.getElementById("cursor");
+    const statusEl = document.getElementById("status");
+
+    const startBtn = document.getElementById("startBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const eraserBtn = document.getElementById("eraserBtn");
+    const colorPicker = document.getElementById("colorPicker");
+    const sizeRange = document.getElementById("sizeRange");
+
+    let camera = null;
+    let lastPoint = null;
+    let drawing = false;
+    let eraserMode = false;
+    let cameraStarted = false;
+
+    function resizeCanvas() {
+      const old = ctx.getImageData(0, 0, canvas.width || 1, canvas.height || 1);
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      if (old.width > 1 && old.height > 1) {
+        try {
+          ctx.putImageData(old, 0, 0);
+        } catch (e) {}
+      }
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+    }
+
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    function dist(a, b) {
+      const dx = a.x - b.x;
+      const dy = a.y - b.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function drawLine(from, to) {
+      ctx.save();
+      ctx.strokeStyle = eraserMode ? "rgba(0,0,0,1)" : colorPicker.value;
+      ctx.lineWidth = Number(sizeRange.value);
+      ctx.globalCompositeOperation = eraserMode ? "destination-out" : "source-over";
+
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function setCursor(x, y, isDrawing) {
+      cursor.style.display = "block";
+      cursor.style.left = x + "px";
+      cursor.style.top = y + "px";
+      cursor.style.width = (Number(sizeRange.value) + 14) + "px";
+      cursor.style.height = (Number(sizeRange.value) + 14) + "px";
+      cursor.style.borderColor = eraserMode ? "#ff6b6b" : colorPicker.value;
+      cursor.style.boxShadow = isDrawing
+        ? "0 0 22px rgba(255,255,255,.9)"
+        : "0 0 10px rgba(255,255,255,.45)";
+    }
+
+    function onResults(results) {
+      if (!results.multiHandLandmarks || !results.multiHandLandmarks.length) {
+        drawing = false;
+        lastPoint = null;
+        statusEl.textContent = "Holat: qo‘l topilmadi";
+        return;
+      }
+
+      const landmarks = results.multiHandLandmarks[0];
+
+      const thumbTip = landmarks[4];
+      const indexTip = landmarks[8];
+
+      const x = (1 - indexTip.x) * canvas.width;
+      const y = indexTip.y * canvas.height;
+
+      const pinchDistance = dist(thumbTip, indexTip);
+      const pinchThreshold = 0.055;
+      const isPinching = pinchDistance < pinchThreshold;
+
+      setCursor(x, y, isPinching);
+
+      if (isPinching) {
+        statusEl.textContent = eraserMode
+          ? "Holat: o‘chiryapti"
+          : "Holat: chizyapti";
+
+        if (!lastPoint) {
+          lastPoint = { x, y };
+        }
+
+        drawLine(lastPoint, { x, y });
+        lastPoint = { x, y };
+        drawing = true;
+      } else {
+        statusEl.textContent = "Holat: tayyor";
+        drawing = false;
+        lastPoint = null;
+      }
+    }
+
+    const hands = new Hands({
+      locateFile: (file) => {
+        return `https://cdn.jsdelivr.net/npm/@mediapipe/hands@0.4/${file}`;
+      }
+    });
+
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.7
+    });
+
+    hands.onResults(onResults);
+
+    async function startCamera() {
+      if (cameraStarted) return;
+
+      try {
+        camera = new Camera(videoEl, {
+          onFrame: async () => {
+            await hands.send({ image: videoEl });
+          },
+          width: 1280,
+          height: 720
+        });
+
+        await camera.start();
+        cameraStarted = true;
+        statusEl.textContent = "Holat: kamera yoqildi";
+      } catch (err) {
+        statusEl.textContent = "Holat: kamera ochilmadi";
+        console.error(err);
+        alert("Kamera ishlamadi. Saytga kamera ruxsatini bering.");
+      }
+    }
+
+    startBtn.addEventListener("click", startCamera);
+
+    clearBtn.addEventListener("click", () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      statusEl.textContent = "Holat: canvas tozalandi";
+    });
+
+    eraserBtn.addEventListener("click", () => {
+      eraserMode = !eraserMode;
+      eraserBtn.textContent = `O‘chirgich: ${eraserMode ? "ON" : "OFF"}`;
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key.toLowerCase() === "c") {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+      if (e.key.toLowerCase() === "e") {
+        eraserMode = !eraserMode;
+        eraserBtn.textContent = `O‘chirgich: ${eraserMode ? "ON" : "OFF"}`;
+      }
+      if (e.key.toLowerCase() === "f") {
+        document.documentElement.requestFullscreen?.();
+      }
+    });
+  </script>
+</body>
+</html>
