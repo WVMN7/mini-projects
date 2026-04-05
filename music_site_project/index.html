@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PulseMix — Modern Music Website</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="loader" id="loader">
+    <div class="loader-ring"></div>
+    <div class="loader-content">
+      <p class="loader-mini">Loading your vibe</p>
+      <h1>PULSE<span>MIX</span></h1>
+      <div class="loader-bars">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+  <canvas id="stars"></canvas>
+
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="logo-glow"></div>
+      <div class="logo">♪</div>
+      <div>
+        <h2>PulseMix</h2>
+        <p>Modern music experience</p>
+      </div>
+    </div>
+
+    <nav class="nav-links">
+      <a href="#discover">Discover</a>
+      <a href="#library">Library</a>
+      <a href="#player">Player</a>
+    </nav>
+
+    <div class="top-actions">
+      <label class="folder-btn">
+        <input type="file" id="folderInput" webkitdirectory multiple accept="audio/*" hidden>
+        Papkani yuklash
+      </label>
+      <button class="ghost-btn" id="themeBtn">Glow</button>
+    </div>
+  </header>
+
+  <main class="page-shell">
+    <section class="hero" id="discover">
+      <div class="hero-left glass-card reveal">
+        <div class="tag-row">
+          <span class="pill active-pill">New Wave</span>
+          <span class="pill">Club Mix</span>
+          <span class="pill">Uz Hits</span>
+        </div>
+
+        <h1>
+          Videodagi <span>music nomlariga mos</span><br>
+          zamonaviy music website
+        </h1>
+
+        <p>
+          Bu sayt demo playlist bilan ochiladi. Pastdagi <strong>“Papkani yuklash”</strong>
+          tugmasi orqali o‘z audio papkangizni tanlasangiz, haqiqiy musiqalaringiz avtomatik yuklanadi.
+        </p>
+
+        <div class="hero-actions">
+          <button class="primary-btn" id="playHeroBtn">Play vibe</button>
+          <button class="secondary-btn" id="scrollLibraryBtn">Kutubxonani ochish</button>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <strong id="trackCount">32</strong>
+            <span>Tracks</span>
+          </div>
+          <div class="stat-card">
+            <strong id="artistCount">24</strong>
+            <span>Artists</span>
+          </div>
+          <div class="stat-card">
+            <strong id="modeType">Demo</strong>
+            <span>Mode</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-right reveal">
+        <div class="spotlight-card glass-card now-card">
+          <div class="now-cover" id="heroCover"></div>
+          <div class="now-meta">
+            <span class="mini-label">Now featured</span>
+            <h3 id="heroTrackTitle">Dilnoz — Kechir</h3>
+            <p id="heroTrackSub">Soft pop / demo playlist</p>
+          </div>
+          <div class="eq-bars large-eq">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <div class="floating-cards">
+          <div class="mini-info glass-card float-a">
+            <span>Import folder</span>
+            <strong>MP3 / WAV / M4A</strong>
+          </div>
+          <div class="mini-info glass-card float-b">
+            <span>Animated UI</span>
+            <strong>Glassmorphism + neon</strong>
+          </div>
+          <div class="mini-info glass-card float-c">
+            <span>Smart library</span>
+            <strong>Search + filter + queue</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="controls glass-card reveal" id="library">
+      <div class="control-top">
+        <div>
+          <p class="section-mini">Library control</p>
+          <h2>Musiqalarni qidirish va filtrlash</h2>
+        </div>
+        <div class="mode-chip" id="libraryModeChip">Demo playlist active</div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <span>⌕</span>
+          <input type="text" id="searchInput" placeholder="Artist, nomi yoki remix qidiring...">
+        </div>
+
+        <div class="chip-row" id="chipRow">
+          <button class="chip active" data-filter="all">All</button>
+          <button class="chip" data-filter="uzbek">Uzbek</button>
+          <button class="chip" data-filter="remix">Remix</button>
+          <button class="chip" data-filter="club">Club</button>
+          <button class="chip" data-filter="world">World</button>
+          <button class="chip" data-filter="soft">Soft</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-grid">
+      <div class="track-area reveal">
+        <div class="section-head">
+          <div>
+            <p class="section-mini">Main collection</p>
+            <h2>Trending library</h2>
+          </div>
+          <button class="ghost-btn small" id="shuffleBtn">Shuffle</button>
+        </div>
+
+        <div class="track-grid" id="trackGrid"></div>
+      </div>
+
+      <aside class="side-panel reveal">
+        <div class="glass-card side-card">
+          <div class="section-head compact">
+            <div>
+              <p class="section-mini">Queue</p>
+              <h3>Up next</h3>
+            </div>
+          </div>
+          <div class="queue-list" id="queueList"></div>
+        </div>
+
+        <div class="glass-card side-card analyzer-card">
+          <div class="section-head compact">
+            <div>
+              <p class="section-mini">Visualizer</p>
+              <h3>Live energy</h3>
+            </div>
+          </div>
+          <canvas id="visualizer" width="320" height="140"></canvas>
+          <p class="hint-text">Haqiqiy audio yuklansa equalizer jonlanadi.</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <section class="bottom-player glass-card" id="player">
+    <audio id="audio"></audio>
+
+    <div class="player-left">
+      <div class="player-cover" id="playerCover"></div>
+      <div>
+        <strong id="currentTitle">Demo playlist tayyor</strong>
+        <p id="currentArtist">Audio papka yuklanganda real playback ishlaydi</p>
+      </div>
+    </div>
+
+    <div class="player-center">
+      <div class="player-buttons">
+        <button id="prevBtn">⏮</button>
+        <button id="playBtn" class="play-main">▶</button>
+        <button id="nextBtn">⏭</button>
+      </div>
+      <div class="progress-wrap">
+        <span id="currentTime">0:00</span>
+        <input type="range" id="progress" min="0" max="100" value="0">
+        <span id="duration">0:00</span>
+      </div>
+    </div>
+
+    <div class="player-right">
+      <div class="volume-wrap">
+        <span>🔊</span>
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8">
+      </div>
+      <button class="ghost-btn small" id="demoInfoBtn">Info</button>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
